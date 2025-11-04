@@ -1,34 +1,49 @@
 import gradio as gr
 import random
+import time
 
 # --- system state ---
 phase = "start"
 system_health = 100
 img_state = 1
+
+# img_state reference (future visual system)
+# 1 = System normal / stable -- normal
+# 2 = Oxygen system issue -- display gas leaking
+# 3 = Cooling system issue -- display the spacecraft freezing
+# 4 = Power system issue -- display baterry icon malfunctioning
+# 5 = System recovering / repair successful -- show bandage on spacecraft
+# 7 = Critical failure / shutdown -- show spacecraft imploding into pieces
+
 current_component = None  # Track which component is active
+completed_components = []  # Track which components have been fixed
 
 def reset_game():
-    global phase, system_health, img_state, current_component
+    global phase, system_health, img_state, current_component, completed_components
     phase = "start"
     system_health = 100
     img_state = 1
     current_component = None
+    completed_components = []
 
     intro = [{
         "role": "assistant",
-        "content": "Hi, I'm CoAura. One of the system components may be acting up. How would you like to start?"
+        "content": "Hi, I'm CoAura, NASA's SOS Responce Agent. One of the system components may be acting up. How would you like to start?"
     }]
     options = ["Run a system scan", "Ignore for now"]
     return intro, gr.update(choices=options, value=None)
 
 def progress(choice, chat):
-    global phase, system_health, img_state, current_component
+    global phase, system_health, img_state, current_component, completed_components
 
     if not choice:
         chat.append({"role":"assistant","content":"Please choose an option so I can continue."})
         return chat, gr.update()
 
     chat.append({"role":"user","content":choice})
+    
+    # Add natural pause before responding
+    time.sleep(random.uniform(0.5, 1.0))
 
     # system failsafe
     if system_health <= 0 and phase != "end":
@@ -39,7 +54,15 @@ def progress(choice, chat):
     # --- INITIAL SCAN ---
     if phase == "start":
         if choice == "Run a system scan":
-            current_component = random.choice(["O2", "Cooling", "Power"])
+            # Pick a component that hasn't been fixed yet
+            available = [c for c in ["O2", "Cooling", "Power"] if c not in completed_components]
+            
+            if not available:
+                reply = "All systems operational! Mission complete. Restart to play again."
+                options = ["Restart"]
+                phase = "end"
+            else:
+                current_component = random.choice(available)
             
             if current_component == "O2":
                 img_state = 2
@@ -63,9 +86,15 @@ def progress(choice, chat):
             system_health -= 25
             reply = "Ignoring the issue made things worse. What should we do now?"
             options = ["Run a system scan", "Reboot subsystem"]
+            
+        elif choice == "Reboot subsystem":
+            system_health -= 15
+            reply = "Reboot failed to resolve the issue. Try scanning the system."
+            options = ["Run a system scan"]
+            
         else:
             reply = "I didn't quite understand that."
-            options = []
+            options = ["Run a system scan", "Ignore for now"]
 
     # ---- OXYGEN: First Choice ----
     elif phase == "o2_choice1":
@@ -83,6 +112,7 @@ def progress(choice, chat):
         if choice == "Open emergency vent slowly":
             img_state = 5
             reply = "Perfect! Pressure stabilized. Oxygen levels normal."
+            completed_components.append("O2")
             phase = "finish"
             options = ["Continue"]
         else:  # Close primary intake
@@ -97,6 +127,7 @@ def progress(choice, chat):
         if choice == "Activate redundant oxygen tank":
             img_state = 5
             reply = "Excellent choice! Backup O2 flowing smoothly."
+            completed_components.append("O2")
             phase = "finish"
             options = ["Continue"]
         else:  # Purge main line
@@ -122,6 +153,7 @@ def progress(choice, chat):
         if choice == "Gradually raise pump pressure":
             img_state = 5
             reply = "Success! Temperature dropping to safe levels."
+            completed_components.append("Cooling")
             phase = "finish"
             options = ["Continue"]
         else:
@@ -135,6 +167,7 @@ def progress(choice, chat):
         if choice == "Activate secondary radiators":
             img_state = 5
             reply = "Perfect! Cooling systems balanced and stable."
+            completed_components.append("Cooling")
             phase = "finish"
             options = ["Continue"]
         else:
@@ -160,6 +193,7 @@ def progress(choice, chat):
         if choice == "Recalibrate voltage threshold":
             img_state = 5
             reply = "Voltage stabilized! Power grid operating normally."
+            completed_components.append("Power")
             phase = "finish"
             options = ["Continue"]
         else:
@@ -173,6 +207,7 @@ def progress(choice, chat):
         if choice == "Switch to battery backup":
             img_state = 5
             reply = "Smart move! Battery power maintaining all systems."
+            completed_components.append("Power")
             phase = "finish"
             options = ["Continue"]
         else:
@@ -185,9 +220,15 @@ def progress(choice, chat):
     # ---- Recovery state ----
     elif phase == "finish":
         img_state = 6
-        reply = "Everything looks stable now. Restart?"
-        phase = "end"
-        options = ["Restart"]
+        remaining = len([c for c in ["O2", "Cooling", "Power"] if c not in completed_components])
+        if remaining > 0:
+            reply = "System stable! But wait... detecting another issue. Scanning now..."
+            phase = "start"
+            options = ["Run a system scan"]
+        else:
+            reply = "All systems operational! Mission complete. Restart to play again."
+            phase = "end"
+            options = ["Restart"]
 
     # ---- Restart handler ----
     elif phase == "end":
@@ -201,7 +242,7 @@ def progress(choice, chat):
 
 # ---- UI ----
 with gr.Blocks() as app:
-    gr.Markdown("## 🤖 CoAura — NASA SOS BOT")
+    gr.Markdown("## 🤖 CoAura —  NASA's SOS Responce Agent")
     chat = gr.Chatbot(type="messages", height=350)
     picks = gr.Radio([], label="Select an option")
     btn = gr.Button("Continue")

@@ -72,4 +72,4 @@ This repository includes a `LICENSE` file — see it for license details.
 
 ---
 
-If you'd like, I can add a `requirements.txt`, a short unit test for the game logic, or expand the README with screenshots and a developer guide. Tell me which you'd prefer next.
+- README.md Made with Github Copilot

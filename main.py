@@ -1,30 +1,43 @@
-﻿import gradio as gr
+import gradio as gr
 import random
 import time
+import os
 
+# --- Game State ---
 phase = "start"
 img_state = 1
 completed_components = []
 
+# --- Image Helper ---
+def get_image_path(state):
+    """Returns the path to the image for the current state."""
+    # This function ensures the app can find your images (e.g., "images/1.png")
+    return os.path.join("images", f"{state}.png")
+
+# --- Game Logic ---
 def reset_game():
+    """Resets the game to its initial state."""
     global phase, img_state, completed_components
     phase = "start"
     img_state = 1
     completed_components = []
-    
     intro = [{"role": "assistant", "content": "Commander, this is CoAura. I'm detecting anomalies in the station systems. We need to address this immediately. Shall I run a full diagnostic scan?"}]
-    return intro, gr.update(choices=["Run a system scan", "Ignore for now"], value=None)
+    # CRITICAL CHANGE: Notice it now returns the image path at the end
+    return intro, gr.update(choices=["Run a system scan", "Ignore for now"], value=None), get_image_path(img_state)
 
 def progress(choice, chat):
+    """Main function to handle game progress and UI updates."""
     global phase, img_state, completed_components
-    
+
     if not choice:
-        chat.append({"role":"assistant","content":"Commander, I need your input to proceed. Please select an option."})
-        return chat, gr.update()
-    
-    chat.append({"role":"user","content":choice})
+        chat.append({"role": "assistant", "content": "Commander, I need your input to proceed. Please select an option."})
+        # CRITICAL CHANGE: The function must always return a value for the image component
+        return chat, gr.update(), get_image_path(img_state)
+
+    chat.append({"role": "user", "content": choice})
     time.sleep(random.uniform(0.5, 1.0))
-    
+
+    # --- All the game logic remains the same here ---
     if phase == "start":
         if choice == "Run a system scan":
             available = [c for c in ["O2", "Cooling", "Power"] if c not in completed_components]
@@ -57,12 +70,12 @@ def progress(choice, chat):
         else:
             reply = "I didn't catch that, Commander. Could you clarify your instructions?"
             options = ["Run a system scan", "Ignore for now"]
-    
+
     elif phase == "o2_choice1":
         reply = "Good choice, Commander. Now, I'm walking you through the procedure. Which specific action should I help you execute?"
         phase = "o2_choice2"
         options = ["Open emergency vent slowly", "Close primary intake valve"] if choice == "Attempt manual valve adjustment" else ["Activate redundant oxygen tank", "Purge main O2 line"]
-    
+
     elif phase == "o2_choice2":
         if random.random() < 0.5:
             img_state = 5
@@ -75,12 +88,12 @@ def progress(choice, chat):
             reply = f"Commander, no! The '{choice}' procedure caused a cascade failure. I'm detecting rapid decompression. We've lost life support. I'm sorry, Commander..."
             phase = "end"
             options = ["Restart"]
-    
+
     elif phase == "cooling_choice1":
         reply = "Understood, Commander. I'm configuring that now. What's your next step?"
         phase = "cooling_choice2"
         options = ["Gradually raise pump pressure", "Flush coolant reservoir"] if choice == "Increase coolant flow rate" else ["Activate secondary radiators", "Divert heat to main radiator"]
-    
+
     elif phase == "cooling_choice2":
         if random.random() < 0.5:
             img_state = 5
@@ -93,12 +106,12 @@ def progress(choice, chat):
             reply = f"Commander, we have a problem! The '{choice}' caused a thermal runaway. Critical systems are overheating. I'm losing control..."
             phase = "end"
             options = ["Restart"]
-    
+
     elif phase == "power_choice1":
         reply = "On it, Commander. I'm preparing the power systems. Which final step should I execute?"
         phase = "power_choice2"
         options = ["Recalibrate voltage threshold", "Bypass surge protector"] if choice == "Stabilize main voltage regulator" else ["Switch to battery backup", "Isolate faulty circuit"]
-    
+
     elif phase == "power_choice2":
         if random.random() < 0.5:
             img_state = 5
@@ -111,9 +124,8 @@ def progress(choice, chat):
             reply = f"Commander, abort! The '{choice}' triggered a massive surge. I'm losing power to all— [CONNECTION LOST]"
             phase = "end"
             options = ["Restart"]
-    
+
     elif phase == "finish":
-        img_state = 6
         remaining = len([c for c in ["O2", "Cooling", "Power"] if c not in completed_components])
         if remaining > 0:
             reply = "Great work, Commander! That system is stable now. But... hold on, I'm detecting another critical alert. We need to move fast. Running diagnostics..."
@@ -123,23 +135,37 @@ def progress(choice, chat):
             reply = "Excellent work, Commander! All critical systems are now functioning normally. The station is secure. Would you like to run another simulation?"
             phase = "end"
             options = ["Restart"]
-    
+
     elif phase == "end":
         if "restart" in choice.lower():
+            # CRITICAL CHANGE: The reset function now returns 3 values
             return reset_game()
         reply = "I'm standing by, Commander. Ready to assist when you need me."
         options = ["Restart"]
-    
-    chat.append({"role":"assistant","content":reply})
-    return chat, gr.update(choices=options, value=options[0])
 
-with gr.Blocks() as app:
+    chat.append({"role": "assistant", "content": reply})
+    # CRITICAL CHANGE: Notice it now returns the image path at the end
+    return chat, gr.update(choices=options, value=options[0] if options else None), get_image_path(img_state)
+
+
+# --- UI Layout ---
+with gr.Blocks(theme=gr.themes.Soft()) as app:
     gr.Markdown("##  CoAura — NASA's SOS Response Agent")
-    chat = gr.Chatbot(type="messages", height=550)
-    picks = gr.Radio([], label="Select an option")
-    btn = gr.Button("Continue")
     
-    app.load(reset_game, [], [chat, picks])
-    btn.click(progress, [picks, chat], [chat, picks])
+    # THIS IS THE NEW LAYOUT CODE
+    with gr.Row():
+        with gr.Column(scale=1):
+            # This is the new Image component on the left
+            img = gr.Image(value=get_image_path(img_state), label="Spaceship Status", show_label=True, interactive=False)
+        with gr.Column(scale=2):
+            # This is your chat interface on the right
+            chat = gr.Chatbot(type="messages", height=550)
+            picks = gr.Radio([], label="Select an option")
+            btn = gr.Button("Continue")
+
+    # --- Event Handling ---
+    # CRITICAL CHANGE: The 'outputs' list for the functions now includes the 'img' component
+    app.load(reset_game, [], [chat, picks, img])
+    btn.click(progress, [picks, chat], [chat, picks, img])
 
 app.launch()

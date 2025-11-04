@@ -1,7 +1,7 @@
 import gradio as gr
 import random
 
-# simple globals (still learning state machines lol)
+# basic state variables
 phase = "start"
 system_health = 100
 
@@ -12,139 +12,137 @@ def reset_game():
 
     first_message = [{
         "role": "assistant",
-        "content": "CoAura systems online. Reactor anomaly confirmed. Standing by for mission input."
+        "content": "Hello, I'm CoAura. I noticed an irregular system reading. How would you like to proceed?"
     }]
     
-    options = ["Run diagnostics", "Ignore alert"]
+    options = ["Run a system check", "Ignore for now"]
     return first_message, gr.update(choices=options, value=None)
 
 def progress(choice, history):
     global phase, system_health
 
     if not choice:
-        history.append({"role":"assistant","content":"Command required. Awaiting your directive."})
+        history.append({"role":"assistant","content":"Please choose an option so I can continue."})
         return history, gr.update()
 
     history.append({"role":"user","content":choice})
 
-    # if reactor already dead before logic
+    # system fail safe
     if system_health <= 0 and phase != "end":
-        reply = "Containment failure detected. Simulation complete. Systems entering safe configuration."
-        options = ["Restart Simulation"]
+        reply = "Something went wrong and the system couldn't recover. We can restart whenever you're ready."
+        options = ["Start again"]
         phase = "end"
         history.append({"role":"assistant","content":reply})
-        return history, gr.update(choices=options, value="Restart Simulation")
+        return history, gr.update(choices=options, value="Start again")
 
-    # ==== GAME PHASES ====
-
+    # Conversation flow (not roleplaying a reactor narrative, just simple AI logic)
     if phase == "start":
-        if choice == "Run diagnostics":
+        if choice == "Run a system check":
             phase = "coolant"
-            reply = "Diagnostics complete. Coolant integrity at 43 percent. Recommend immediate corrective action."
-            options = ["Repair coolant system", "Reroute power"]
-        elif choice == "Ignore alert":
+            reply = "Okay, I looked into it. There's a part of the system performing below expected levels. What would you like to try?"
+            options = ["Attempt a fix", "Try another method"]
+        elif choice == "Ignore for now":
             phase = "overheat"
             system_health -= 25
-            reply = "Thermal spike detected. Core pressure rising. Action required."
-            options = ["Emergency shutdown", "Contact control"]
+            reply = "Understood. However, leaving it unchecked has caused some issues. What should we try now?"
+            options = ["Take quick action", "Contact support"]
         else:
-            reply = "Input not recognized."
+            reply = "Hmm, I didn't understand that."
             options = []
 
     elif phase == "coolant":
-        if choice == "Repair coolant system":
+        if choice == "Attempt a fix":
             if random.random() < 0.5:
                 phase = "critical"
                 system_health -= 40
-                reply = "Repair unsuccessful. Pressure increasing beyond tolerance. Recommend immediate response."
-                options = ["Retry repair", "Abort mission"]
+                reply = "It didn’t quite work. The system is still unstable. What would you like to do next?"
+                options = ["Try again", "Stop here"]
             else:
                 phase = "reroute"
-                reply = "Coolant flow restored. Reactor stability improving. Proceed with secondary power routing."
-                options = ["Proceed"]
-        elif choice == "Reroute power":
+                reply = "Great, that helped. The system is stabilizing. Shall we continue?"
+                options = ["Continue"]
+        elif choice == "Try another method":
             phase = "end"
-            reply = "Power routing realigned. Reactor systems nominal. Mission objective achieved."
-            options = ["Restart Simulation"]
+            reply = "Good thinking. That approach worked, and everything is running normally again."
+            options = ["Start again"]
         else:
-            reply = "Unknown directive."
+            reply = "I'm not sure what you meant."
             options = []
 
     elif phase == "overheat":
-        if choice == "Emergency shutdown":
+        if choice == "Take quick action":
             if random.random() < 0.3:
                 system_health = 0
-                reply = "Shutdown sequence interrupted. Containment compromised."
+                reply = "The quick fix didn’t succeed and caused a failure."
             else:
                 phase = "end"
                 system_health -= 10
-                reply = "Shutdown successful. Thermal output decreasing. Containment stable."
-            options = ["Restart Simulation"]
-        elif choice == "Contact control":
+                reply = "That helped enough for now. The system is recovering."
+            options = ["Start again"]
+        elif choice == "Contact support":
             phase = "manual"
             system_health -= 20
-            reply = "Primary communications offline. Initiating alternate control pathway."
-            options = ["Manual override", "Shutdown reactor"]
+            reply = "Support didn't connect. Let's try another approach."
+            options = ["Manual attempt", "Shut the system down"]
         else:
-            reply = "Invalid procedure."
+            reply = "I didn’t catch that."
             options = []
 
     elif phase == "critical":
-        if choice == "Retry repair":
+        if choice == "Try again":
             if random.random() < 0.6:
                 phase = "reroute"
-                reply = "Repair confirmed. Reactor stabilizing."
-                options = ["Proceed"]
+                reply = "That did the trick! Things are stabilizing."
+                options = ["Continue"]
             else:
                 system_health = 0
                 phase = "end"
-                reply = "Repair failed. Containment breach confirmed."
-                options = ["Restart Simulation"]
-        elif choice == "Abort mission":
+                reply = "Unfortunately, it failed again and the system shut down."
+                options = ["Start again"]
+        elif choice == "Stop here":
             system_health = 0
             phase = "end"
-            reply = "Mission aborted per command. Reactor collapse confirmed."
-            options = ["Restart Simulation"]
+            reply = "System halted. We can restart anytime."
+            options = ["Start again"]
         else:
-            reply = "Unable to interpret command."
+            reply = "Can you choose one of the listed options?"
             options = []
 
     elif phase == "manual":
-        if choice == "Manual override":
+        if choice == "Manual attempt":
             if random.random() < 0.7:
-                reply = "Override accepted. Reactor stability restored."
+                reply = "Nice — that worked. Everything is back to normal."
             else:
                 system_health = 0
-                reply = "Override unsuccessful. Containment collapse in progress."
+                reply = "The attempt didn’t succeed and caused a shutdown."
         else:
             system_health = 0
-            reply = "Shutdown executed, but containment loss already underway."
-
-        options = ["Restart Simulation"]
+            reply = "Shutdown executed. System is offline."
+        options = ["Start again"]
         phase = "end"
 
     elif phase == "reroute":
-        reply = "Reactor stability confirmed. Mission accomplished. Thank you for maintaining operational integrity."
-        options = ["Restart Simulation"]
+        reply = "Everything looks good now. Thanks for working through that with me."
+        options = ["Start again"]
         phase = "end"
 
     elif phase == "end":
-        if "restart" in choice.lower():
+        if "start" in choice.lower():
             msgs, opts = reset_game()
             return msgs, opts
 
-        reply = "Scenario concluded. Select to initiate a new simulation cycle."
-        options = ["Restart Simulation"]
+        reply = "We finished this cycle. Let me know when you're ready to begin again."
+        options = ["Start again"]
 
     history.append({"role":"assistant","content":reply})
     return history, gr.update(choices=options, value=options[0] if options else None)
 
-# ==== UI ====
+
 with gr.Blocks() as app:
-    gr.Markdown("## 🛰️ CoAura — Mission Critical Simulation Console\n### Operate reactor systems in a controlled mission environment.")
+    gr.Markdown("## 🤖 CoAura — Interactive AI Chat Companion\n### We're exploring choices together — let's begin.")
     chat = gr.Chatbot(type="messages", height=350)
-    picks = gr.Radio([], label="Select Action")
-    btn = gr.Button("Execute")
+    picks = gr.Radio([], label="Choose an option")
+    btn = gr.Button("Continue")
 
     app.load(reset_game, [], [chat, picks])
     btn.click(progress, [picks, chat], [chat, picks])

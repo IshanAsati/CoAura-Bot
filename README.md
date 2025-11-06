@@ -73,11 +73,6 @@ After launching, Gradio will print a local URL (for example http://127.0.0.1:786
   - `5` = System recovering (bandage on spacecraft)
   - `6` = Stable state
   - `7` = Critical failure (spacecraft imploding)
-- Consider adding a `requirements.txt` with `gradio` pinned to a specific version
-- Add tests for game logic (`progress` and `reset_game` functions)
-- Implement visual feedback using `img_state` values
-- Add sound effects for immersion
-- Add basic CI to run linting/tests
 
 ### License
 

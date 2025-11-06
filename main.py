@@ -137,7 +137,7 @@ def progress(choice, chat):
         elif choice == "Trivia Game Mode":
             mode = "trivia"
             phase = "trivia_select_category"
-            img_state = 6
+            img_state = 1
             reply = f"🎮 Welcome to Space Trivia, Commander! Test your knowledge across different categories. Choose a category to begin:"
             options = ["Space", "Science", "NASA History"]
         else:
@@ -178,8 +178,10 @@ def progress(choice, chat):
             correct_answer = last_question['options'][last_question['correct']]
             if choice == correct_answer:
                 trivia_score += 1
+                img_state = 5  # Success image for correct answer
                 reply = f"✅ Correct! The answer is {correct_answer}.\n\n"
             else:
+                img_state = 7  # Failure image for wrong answer
                 reply = f"❌ Incorrect. The correct answer was {correct_answer}.\n\n"
             
             trivia_questions_asked += 1
@@ -339,81 +341,7 @@ def progress(choice, chat):
 
 
 # --- UI Layout ---
-# Custom CSS for space theme
-custom_css = """
-body {
-    background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0f0f1e 100%);
-}
-.gradio-container {
-    background: linear-gradient(135deg, #0a0e27 0%, #1a1a3e 50%, #0f0f1e 100%) !important;
-    background-attachment: fixed !important;
-}
-.contain {
-    background: rgba(10, 14, 39, 0.8) !important;
-    backdrop-filter: blur(10px);
-    border: 1px solid rgba(100, 150, 255, 0.3);
-    border-radius: 15px;
-    box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
-}
-h2, h1 {
-    color: #00d9ff !important;
-    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5), 0 0 20px rgba(0, 217, 255, 0.3);
-    font-family: 'Courier New', monospace;
-    text-align: center;
-}
-.message-row {
-    background: rgba(15, 15, 30, 0.6) !important;
-    border: 1px solid rgba(100, 150, 255, 0.2);
-}
-button {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-    border: 2px solid #00d9ff !important;
-    color: white !important;
-    font-weight: bold !important;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 15px 0 rgba(102, 126, 234, 0.4);
-}
-button:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 6px 20px 0 rgba(0, 217, 255, 0.6);
-    border-color: #00ffff !important;
-}
-.radio-item {
-    background: rgba(15, 15, 30, 0.8) !important;
-    border: 2px solid rgba(100, 150, 255, 0.3) !important;
-    color: #00d9ff !important;
-    padding: 10px;
-    margin: 5px 0;
-    border-radius: 8px;
-    transition: all 0.3s ease;
-}
-.radio-item:hover {
-    border-color: #00ffff !important;
-    background: rgba(0, 217, 255, 0.1) !important;
-    transform: translateX(5px);
-}
-label {
-    color: #00d9ff !important;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-size: 0.9em;
-}
-.image-container {
-    border: 2px solid #00d9ff;
-    border-radius: 10px;
-    box-shadow: 0 0 20px rgba(0, 217, 255, 0.3);
-}
-.chatbot {
-    background: rgba(10, 14, 39, 0.8) !important;
-    border: 2px solid rgba(100, 150, 255, 0.3);
-    border-radius: 15px;
-}
-"""
-
-with gr.Blocks(theme=gr.themes.Soft(), css=custom_css) as app:
+with gr.Blocks(theme=gr.themes.Soft()) as app:
     gr.Markdown("""
     # 🚀 CoAura — NASA's SOS Response Agent
     ### *Your AI Companion for Space Missions*
@@ -423,10 +351,10 @@ with gr.Blocks(theme=gr.themes.Soft(), css=custom_css) as app:
     with gr.Row():
         with gr.Column(scale=1):
             # This is the new Image component on the left
-            img = gr.Image(value=get_image_path(img_state), label="🛸 Spaceship Status", show_label=True, interactive=False, elem_classes="image-container")
+            img = gr.Image(value=get_image_path(img_state), label="🛸 Spaceship Status", show_label=True, interactive=False)
         with gr.Column(scale=2):
             # This is your chat interface on the right
-            chat = gr.Chatbot(type="messages", height=550, elem_classes="chatbot")
+            chat = gr.Chatbot(type="messages", height=550)
             picks = gr.Radio([], label="⚡ Select an option")
             btn = gr.Button("🚀 Continue")
 

@@ -1,12 +1,13 @@
-import gradio as gr
+﻿import gradio as gr
 import random
 import time
 import os
 
 # --- Game State ---
-phase = "start"
+phase = "mode_select"
 img_state = 1
 completed_components = []
+mode = None  # Track which mode the user selected
 
 # --- Image Helper ---
 def get_image_path(state):
@@ -15,17 +16,17 @@ def get_image_path(state):
 # --- Game Logic ---
 def reset_game():
     """Resets the game to its initial state."""
-    global phase, img_state, completed_components
-    phase = "start"
+    global phase, img_state, completed_components, mode
+    phase = "mode_select"
     img_state = 1
     completed_components = []
-    intro = [{"role": "assistant", "content": "Commander, this is CoAura. I'm detecting anomalies in the station systems. We need to address this immediately. Shall I run a full diagnostic scan?"}]
-    # CRITICAL CHANGE: Notice it now returns the image path at the end
-    return intro, gr.update(choices=["Run a system scan", "Ignore for now"], value=None), get_image_path(img_state)
+    mode = None
+    intro = [{"role": "assistant", "content": "Hello, Commander. I'm CoAura, your AI assistant. How can I help you today?"}]
+    return intro, gr.update(choices=["Emergency Simulation Mode", "Space Chat Mode"], value=None), get_image_path(img_state)
 
 def progress(choice, chat):
     """Main function to handle game progress and UI updates."""
-    global phase, img_state, completed_components
+    global phase, img_state, completed_components, mode
 
     if not choice:
         chat.append({"role": "assistant", "content": "Commander, I need your input to proceed. Please select an option."})
@@ -35,8 +36,56 @@ def progress(choice, chat):
     chat.append({"role": "user", "content": choice})
     time.sleep(random.uniform(0.5, 1.0))
 
-    # --- All the game logic remains the same here ---
-    if phase == "start":
+    # --- MODE SELECTION ---
+    if phase == "mode_select":
+        if choice == "Emergency Simulation Mode":
+            mode = "emergency"
+            phase = "start"
+            reply = "Emergency mode activated. Commander, I'm detecting anomalies in the station systems. We need to address this immediately. Shall I run a full diagnostic scan?"
+            options = ["Run a system scan", "Ignore for now"]
+        elif choice == "Space Chat Mode":
+            mode = "chat"
+            phase = "space_chat"
+            reply = "Great! I'm here to talk about anything space-related. What would you like to discuss?"
+            options = ["Tell me about the International Space Station", "What's it like being an astronaut?", "Explain how rockets work", "Back to Emergency Mode"]
+        else:
+            reply = "Please select a mode to continue."
+            options = ["Emergency Simulation Mode", "Space Chat Mode"]
+    
+    # --- SPACE CHAT MODE ---
+    elif phase == "space_chat":
+        if choice == "Tell me about the International Space Station":
+            reply = "The International Space Station (ISS) is a marvel of human engineering! It orbits Earth at about 400 km altitude, traveling at 28,000 km/h. It's been continuously inhabited since 2000 and serves as a microgravity research laboratory. The station is about the size of a football field and requires constant maintenance. What else would you like to know?"
+            options = ["What's it like being an astronaut?", "Explain how rockets work", "Tell me about space food", "Back to Emergency Mode"]
+        elif choice == "What's it like being an astronaut?":
+            reply = "Being an astronaut is incredible but challenging! You experience weightlessness, see 16 sunrises and sunsets daily, and witness Earth from a unique perspective. However, you must exercise 2 hours daily to prevent muscle loss, adapt to sleeping while floating, and learn to eat carefully so food doesn't float away. The camaraderie with your crew is essential. Interested in another topic?"
+            options = ["Tell me about the International Space Station", "Explain how rockets work", "What about spacewalks?", "Back to Emergency Mode"]
+        elif choice == "Explain how rockets work":
+            reply = "Rockets work on Newton's third law: for every action, there's an equal and opposite reaction! They burn fuel (like liquid hydrogen and oxygen) in a combustion chamber, creating hot expanding gases. These gases shoot out the bottom nozzle at extreme speeds, pushing the rocket upward. Modern rockets have multiple stages that detach as fuel is used to reduce weight. Fascinating, right?"
+            options = ["Tell me about the International Space Station", "What's it like being an astronaut?", "Tell me about Mars missions", "Back to Emergency Mode"]
+        elif choice == "Tell me about space food":
+            reply = "Space food has come a long way! Early astronauts ate from tubes, but now they enjoy freeze-dried meals, thermostabilized pouches, and even fresh fruit on resupply missions. Everything must be carefully packaged to prevent crumbs (which could damage equipment) and must have a long shelf life. Some foods like salt and pepper come in liquid form to prevent floating particles. What else interests you?"
+            options = ["What about spacewalks?", "Tell me about Mars missions", "How do astronauts exercise in space?", "Back to Emergency Mode"]
+        elif choice == "What about spacewalks?":
+            reply = "Spacewalks (EVAs) are some of the most challenging activities! Astronauts wear 300-pound spacesuits with their own life support systems. They're tethered to the station for safety and can work for 6-8 hours. The suits protect against temperature extremes (-250°F to +250°F), micrometeoroids, and radiation. Training for spacewalks takes months in underwater pools. Anything else?"
+            options = ["Tell me about space food", "How do astronauts exercise in space?", "Tell me about Mars missions", "Back to Emergency Mode"]
+        elif choice == "Tell me about Mars missions":
+            reply = "Mars exploration is humanity's next giant leap! A trip to Mars takes 6-9 months one way. Challenges include radiation exposure, psychological effects of isolation, growing food in Martian soil, and creating breathable air from the CO2 atmosphere. NASA's Perseverance rover is currently exploring Mars, searching for signs of ancient life. The goal is to send humans by the 2030s. Exciting times!"
+            options = ["What's it like being an astronaut?", "Explain how rockets work", "What about spacewalks?", "Back to Emergency Mode"]
+        elif choice == "How do astronauts exercise in space?":
+            reply = "Exercise is crucial in space! Without gravity, muscles and bones weaken rapidly. Astronauts use special equipment: a treadmill with harnesses to simulate running, a stationary bike, and a resistance exercise device (like weightlifting). They exercise 2 hours daily, 6 days a week. Some astronauts even run marathons in space! What else would you like to explore?"
+            options = ["Tell me about the International Space Station", "What about spacewalks?", "Tell me about Mars missions", "Back to Emergency Mode"]
+        elif choice == "Back to Emergency Mode":
+            mode = "emergency"
+            phase = "start"
+            reply = "Switching to Emergency Simulation Mode. Commander, I'm detecting anomalies in the station systems. We need to address this immediately. Shall I run a full diagnostic scan?"
+            options = ["Run a system scan", "Ignore for now"]
+        else:
+            reply = "That's an interesting question! What else would you like to know about space?"
+            options = ["Tell me about the International Space Station", "What's it like being an astronaut?", "Explain how rockets work", "Back to Emergency Mode"]
+
+    # --- rest of the game logic remains the same here ---
+    elif phase == "start":
         if choice == "Run a system scan":
             available = [c for c in ["O2", "Cooling", "Power"] if c not in completed_components]
             if not available:

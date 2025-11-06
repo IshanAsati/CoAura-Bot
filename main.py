@@ -10,8 +10,6 @@ completed_components = []
 
 # --- Image Helper ---
 def get_image_path(state):
-    """Returns the path to the image for the current state."""
-    # This function ensures the app can find your images (e.g., "images/1.png")
     return os.path.join("images", f"{state}.png")
 
 # --- Game Logic ---

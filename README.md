@@ -84,3 +84,4 @@ After launching, Gradio will print a local URL (for example http://127.0.0.1:786
 This repository includes a `LICENSE` file — see it for license details.
 
 ---
+https://docs.google.com/presentation/d/1L2-AftcGhO7MEDxqE9Z8Z3PKgertAWzI7fQjVZP8vUs/edit?usp=sharing

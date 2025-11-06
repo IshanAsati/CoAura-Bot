@@ -1,33 +1,123 @@
-import gradio as gr
+﻿import gradio as gr
 import random
 import time
 import os
 
 # --- Game State ---
-phase = "start"
+phase = "mode_select"
 img_state = 1
 completed_components = []
+mode = None  # Track which mode the user selected
+trivia_score = 0
+trivia_questions_asked = 0
+trivia_category = None
+
+# --- Trivia Questions Database ---
+TRIVIA_QUESTIONS = {
+    "Space": [
+        {
+            "question": "What is the largest planet in our solar system?",
+            "options": ["Mars", "Jupiter", "Saturn", "Neptune"],
+            "correct": 1
+        },
+        {
+            "question": "How long does it take for light from the Sun to reach Earth?",
+            "options": ["8 seconds", "8 minutes", "8 hours", "8 days"],
+            "correct": 1
+        },
+        {
+            "question": "Which planet is known as the Red Planet?",
+            "options": ["Venus", "Mars", "Mercury", "Jupiter"],
+            "correct": 1
+        },
+        {
+            "question": "What is the name of Earth's only natural satellite?",
+            "options": ["Phobos", "Titan", "The Moon", "Europa"],
+            "correct": 2
+        },
+        {
+            "question": "How many planets are in our solar system?",
+            "options": ["7", "8", "9", "10"],
+            "correct": 1
+        }
+    ],
+    "Science": [
+        {
+            "question": "What is the chemical symbol for water?",
+            "options": ["H2O", "CO2", "O2", "HO"],
+            "correct": 0
+        },
+        {
+            "question": "What is the speed of light in vacuum?",
+            "options": ["300,000 km/s", "150,000 km/s", "450,000 km/s", "200,000 km/s"],
+            "correct": 0
+        },
+        {
+            "question": "What is the smallest unit of matter?",
+            "options": ["Molecule", "Cell", "Atom", "Electron"],
+            "correct": 2
+        },
+        {
+            "question": "Which gas do plants absorb from the atmosphere?",
+            "options": ["Oxygen", "Nitrogen", "Carbon Dioxide", "Helium"],
+            "correct": 2
+        },
+        {
+            "question": "What is the hardest natural substance on Earth?",
+            "options": ["Gold", "Iron", "Diamond", "Titanium"],
+            "correct": 2
+        }
+    ],
+    "NASA History": [
+        {
+            "question": "In what year did NASA land the first humans on the Moon?",
+            "options": ["1965", "1967", "1969", "1971"],
+            "correct": 2
+        },
+        {
+            "question": "What was the name of the first space shuttle?",
+            "options": ["Discovery", "Challenger", "Enterprise", "Columbia"],
+            "correct": 2
+        },
+        {
+            "question": "Who was the first American in space?",
+            "options": ["Neil Armstrong", "Buzz Aldrin", "Alan Shepard", "John Glenn"],
+            "correct": 2
+        },
+        {
+            "question": "What does ISS stand for?",
+            "options": ["International Space Station", "Interstellar Space Ship", "International Satellite System", "Inner Solar System"],
+            "correct": 0
+        },
+        {
+            "question": "Which Apollo mission was the first to land on the Moon?",
+            "options": ["Apollo 8", "Apollo 10", "Apollo 11", "Apollo 13"],
+            "correct": 2
+        }
+    ]
+}
 
 # --- Image Helper ---
 def get_image_path(state):
-    """Returns the path to the image for the current state."""
-    # This function ensures the app can find your images (e.g., "images/1.png")
     return os.path.join("images", f"{state}.png")
 
 # --- Game Logic ---
 def reset_game():
     """Resets the game to its initial state."""
-    global phase, img_state, completed_components
-    phase = "start"
+    global phase, img_state, completed_components, mode, trivia_score, trivia_questions_asked, trivia_category
+    phase = "mode_select"
     img_state = 1
     completed_components = []
-    intro = [{"role": "assistant", "content": "Commander, this is CoAura. I'm detecting anomalies in the station systems. We need to address this immediately. Shall I run a full diagnostic scan?"}]
-    # CRITICAL CHANGE: Notice it now returns the image path at the end
-    return intro, gr.update(choices=["Run a system scan", "Ignore for now"], value=None), get_image_path(img_state)
+    mode = None
+    trivia_score = 0
+    trivia_questions_asked = 0
+    trivia_category = None
+    intro = [{"role": "assistant", "content": "Hello, Commander. I'm CoAura, your AI assistant. How can I help you today?"}]
+    return intro, gr.update(choices=["Emergency Simulation Mode", "Trivia Game Mode"], value=None), get_image_path(img_state)
 
 def progress(choice, chat):
     """Main function to handle game progress and UI updates."""
-    global phase, img_state, completed_components
+    global phase, img_state, completed_components, mode, trivia_score, trivia_questions_asked, trivia_category
 
     if not choice:
         chat.append({"role": "assistant", "content": "Commander, I need your input to proceed. Please select an option."})
@@ -37,8 +127,110 @@ def progress(choice, chat):
     chat.append({"role": "user", "content": choice})
     time.sleep(random.uniform(0.5, 1.0))
 
-    # --- All the game logic remains the same here ---
-    if phase == "start":
+    # --- MODE SELECTION ---
+    if phase == "mode_select":
+        if choice == "Emergency Simulation Mode":
+            mode = "emergency"
+            phase = "start"
+            reply = "Emergency mode activated. Commander, I'm detecting anomalies in the station systems. We need to address this immediately. Shall I run a full diagnostic scan?"
+            options = ["Run a system scan", "Ignore for now"]
+        elif choice == "Trivia Game Mode":
+            mode = "trivia"
+            phase = "trivia_select_category"
+            img_state = 1
+            reply = f"🎮 Welcome to Space Trivia, Commander! Test your knowledge across different categories. Choose a category to begin:"
+            options = ["Space", "Science", "NASA History"]
+        else:
+            reply = "Please select a mode to continue."
+            options = ["Emergency Simulation Mode", "Trivia Game Mode"]
+    
+    # --- TRIVIA GAME MODE ---
+    elif phase == "trivia_select_category":
+        if choice in ["Space", "Science", "NASA History"]:
+            trivia_category = choice
+            trivia_score = 0
+            trivia_questions_asked = 0
+            phase = "trivia_playing"
+            # Get first question
+            question_data = random.choice(TRIVIA_QUESTIONS[trivia_category])
+            reply = f"📚 Category: {trivia_category}\n\nQuestion 1:\n{question_data['question']}"
+            options = question_data['options']
+        else:
+            reply = "Please select a valid category."
+            options = ["Space", "Science", "NASA History"]
+    
+    elif phase == "trivia_playing":
+        # Find the question that was just asked (last assistant message)
+        last_question = None
+        for msg in reversed(chat):
+            if msg["role"] == "assistant" and "Question" in msg["content"]:
+                # Extract question text
+                question_text = msg["content"].split("\n")[-1]
+                # Find matching question
+                for q in TRIVIA_QUESTIONS[trivia_category]:
+                    if q["question"] in question_text:
+                        last_question = q
+                        break
+                break
+        
+        if last_question:
+            # Check if answer is correct
+            correct_answer = last_question['options'][last_question['correct']]
+            if choice == correct_answer:
+                trivia_score += 1
+                img_state = 5  # Success image for correct answer
+                reply = f"✅ Correct! The answer is {correct_answer}.\n\n"
+            else:
+                img_state = 7  # Failure image for wrong answer
+                reply = f"❌ Incorrect. The correct answer was {correct_answer}.\n\n"
+            
+            trivia_questions_asked += 1
+            
+            # Check if game should continue
+            if trivia_questions_asked >= 5:
+                img_state = 5 if trivia_score >= 3 else 1
+                reply += f"🎮 Game Over!\n\nFinal Score: {trivia_score}/5\n\n"
+                if trivia_score == 5:
+                    reply += "Perfect score, Commander! Outstanding knowledge! 🌟"
+                elif trivia_score >= 3:
+                    reply += "Great job, Commander! You know your stuff! 🚀"
+                else:
+                    reply += "Keep learning, Commander! Try again to improve your score! 📚"
+                options = ["Play Again", "Change Category", "Back to Main Menu"]
+                phase = "trivia_end"
+            else:
+                # Get next question
+                question_data = random.choice(TRIVIA_QUESTIONS[trivia_category])
+                reply += f"Score: {trivia_score}/{trivia_questions_asked}\n\nQuestion {trivia_questions_asked + 1}:\n{question_data['question']}"
+                options = question_data['options']
+        else:
+            reply = "Error processing your answer. Let's continue."
+            options = ["Back to Main Menu"]
+    
+    elif phase == "trivia_end":
+        if choice == "Play Again":
+            trivia_score = 0
+            trivia_questions_asked = 0
+            phase = "trivia_playing"
+            img_state = 6
+            # Get first question
+            question_data = random.choice(TRIVIA_QUESTIONS[trivia_category])
+            reply = f"📚 Category: {trivia_category}\n\nQuestion 1:\n{question_data['question']}"
+            options = question_data['options']
+        elif choice == "Change Category":
+            phase = "trivia_select_category"
+            img_state = 6
+            reply = "Choose a new category:"
+            options = ["Space", "Science", "NASA History"]
+        elif choice == "Back to Main Menu":
+            phase = "mode_select"
+            img_state = 1
+            reply = "Returning to main menu. What would you like to do next, Commander?"
+            options = ["Emergency Simulation Mode", "Trivia Game Mode"]
+        else:
+            reply = "What would you like to do?"
+            options = ["Play Again", "Change Category", "Back to Main Menu"]
+    elif phase == "start":
         if choice == "Run a system scan":
             available = [c for c in ["O2", "Cooling", "Power"] if c not in completed_components]
             if not available:
@@ -150,18 +342,21 @@ def progress(choice, chat):
 
 # --- UI Layout ---
 with gr.Blocks(theme=gr.themes.Soft()) as app:
-    gr.Markdown("##  CoAura — NASA's SOS Response Agent")
+    gr.Markdown("""
+    # 🚀 CoAura — NASA's SOS Response Agent
+    ### *Your AI Companion for Space Missions*
+    """)
     
     # THIS IS THE NEW LAYOUT CODE
     with gr.Row():
         with gr.Column(scale=1):
             # This is the new Image component on the left
-            img = gr.Image(value=get_image_path(img_state), label="Spaceship Status", show_label=True, interactive=False)
+            img = gr.Image(value=get_image_path(img_state), label="🛸 Spaceship Status", show_label=True, interactive=False)
         with gr.Column(scale=2):
             # This is your chat interface on the right
             chat = gr.Chatbot(type="messages", height=550)
-            picks = gr.Radio([], label="Select an option")
-            btn = gr.Button("Continue")
+            picks = gr.Radio([], label="⚡ Select an option")
+            btn = gr.Button("🚀 Continue")
 
     # --- Event Handling ---
     # CRITICAL CHANGE: The 'outputs' list for the functions now includes the 'img' component

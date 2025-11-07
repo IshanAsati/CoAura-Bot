@@ -1,4 +1,4 @@
-﻿import gradio as gr
+import gradio as gr
 import random
 import time
 import os
@@ -138,7 +138,7 @@ def progress(choice, chat):
             mode = "trivia"
             phase = "trivia_select_category"
             img_state = 1
-            reply = f"🎮 Welcome to Space Trivia, Commander! Test your knowledge across different categories. Choose a category to begin:"
+            reply = "🎮 Welcome to Space Trivia, Commander! Test your knowledge across different categories. Choose a category to begin:"
             options = ["Space", "Science", "NASA History"]
         else:
             reply = "Please select a mode to continue."
@@ -192,10 +192,13 @@ def progress(choice, chat):
                 reply += f"🎮 Game Over!\n\nFinal Score: {trivia_score}/5\n\n"
                 if trivia_score == 5:
                     reply += "Perfect score, Commander! Outstanding knowledge! 🌟"
+                    img_state = 5
                 elif trivia_score >= 3:
                     reply += "Great job, Commander! You know your stuff! 🚀"
+                    img_state = 5
                 else:
                     reply += "Keep learning, Commander! Try again to improve your score! 📚"
+                    img_state = 7
                 options = ["Play Again", "Change Category", "Back to Main Menu"]
                 phase = "trivia_end"
             else:

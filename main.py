@@ -344,7 +344,7 @@ def progress(choice, chat):
 
 
 # --- UI Layout ---
-with gr.Blocks(theme=gr.themes.Soft()) as app:
+with gr.Blocks() as app:
     gr.Markdown("""
     # 🚀 CoAura — NASA's SOS Response Agent
     ### *Your AI Companion for Space Missions*
@@ -357,7 +357,7 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
             img = gr.Image(value=get_image_path(img_state), label="🛸 Spaceship Status", show_label=True, interactive=False)
         with gr.Column(scale=2):
             # This is your chat interface on the right
-            chat = gr.Chatbot(type="messages", height=550)
+            chat = gr.Chatbot(height=550)
             picks = gr.Radio([], label="⚡ Select an option")
             btn = gr.Button("🚀 Continue")
 
@@ -366,4 +366,4 @@ with gr.Blocks(theme=gr.themes.Soft()) as app:
     app.load(reset_game, [], [chat, picks, img])
     btn.click(progress, [picks, chat], [chat, picks, img])
 
-app.launch()
+app.launch(theme=gr.themes.Soft())
